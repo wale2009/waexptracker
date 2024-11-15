@@ -1,11 +1,11 @@
 const { Op } = require("sequelize");
-// const path = require("path");
-// const fs = require("fs");
-// const { createObjectCsvWriter } = require("csv-writer");
+const path = require("path");
+const fs = require("fs");
+const { createObjectCsvWriter } = require("csv-writer");
 const Expense = require("../../models/Expense");
 const Category = require("../../models/Category");
-// const { checkMonthlyBudget } = require("../../utils/shared");
-// const { error } = require("console");
+const { checkMonthlyBudget } = require("../../utils/shared");
+const { error } = require("console");
 // const User = require("../../models/User");
 
 // @desc Create Expense
@@ -40,32 +40,26 @@ const createExpenseHandler = async (req, res) => {
       });
     }
 
-    // const hasExceededBudget = await checkMonthlyBudget(user.id);
-    // if (hasExceededBudget.message) {
-    //   return res.status(500).json({
-    //     message: hasExceededBudget.message,
-    //   });
-    // } else if (hasExceededBudget) {
-    //   return res.status(400).json({
-    //     message: "You have exceeded your monthly budget",
-    //   });
-    // } else {
-    //   const expense = await Expense.create({
-    //     amount,
-    //     narration,
-    //   });
-
+    const hasExceededBudget = await checkMonthlyBudget(user.id);
+    if (hasExceededBudget.message) {
+      return res.status(500).json({
+        message: hasExceededBudget.message,
+      });
+    } else if (hasExceededBudget) {
+      return res.status(400).json({
+        message: "You have exceeded your monthly budget",
+      });
+    } else {
       const expense = await Expense.create({
         amount,
         narration,
-        categoryId,
       });
 
       expense.setUser(user);
       expense.setCategory(category);
 
       res.status(201).json(expense);
-    // }
+    }
   } catch (error) {
     return res.status(500).json({
       message: error.message,
@@ -121,13 +115,14 @@ const getExpensesHandler = async (req, res) => {
         where: {
           UserId: user.id,
           narration: {
-            [Op.iLike]: `%${search}%`,
+            [Op.iLike]: `%${search}%`, // Find any expense in their name
           },
         },
         order: [["createdAt", "DESC"]],
       });
       return res.status(200).json(expenses);
     }
+    // do for amount so u can search for amount
 
     // fetch all user expenses
     const expenses = await Expense.findAll({
@@ -277,7 +272,7 @@ const deleteExpenseHandler = async (req, res) => {
 // @access Private
 const getExpenseSummaryHandler = async (req, res) => {
   try {
-    let { startDate, endDate } = req.query;
+    let { startDate, endDate, category } = req.query;
     const user = req.user;
     let expenses = [];
 
